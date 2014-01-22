@@ -9,4 +9,6 @@ plot(x,y)
 
 >Once upon a time there was a little piece of *code*.
 
+>Woot! Success!
+
 Add some stuff here.
