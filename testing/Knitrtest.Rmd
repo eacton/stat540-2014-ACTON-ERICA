@@ -1,0 +1,12 @@
+Test R Markdown
+========================================================
+ 
+```{r testplot}
+y <- (1:5)
+x <- y^2
+plot(x,y)
+```
+
+>Once upon a time there was a little piece of *code*.
+
+Add some stuff here.
