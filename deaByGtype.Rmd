@@ -1,0 +1,39 @@
+SEMINAR04: Two Group Testing and Data Aggregation
+=============================================================================
+1. Load and preview dataset.
+-----------------------------
+```{r load and preview}
+library(lattice)
+prDat <- read.table("/home/eacton/R/stat540-2014-ACTON-ERICA/GSE4051_data.tsv")
+str(prDat, max.level=0)
+prDES <- readRDS("/home/eacton/R/stat540-2014-ACTON-ERICA/GSE4051_design.rds")
+str(prDES)
+```
+2. Select random gene under investigation.
+------------------------------------------------------------------
+```{r random gene}
+set.seed(20)
+(theGene <- sample(1:nrow(prDat),1))
+pDAT <- data.frame(prDES, gExp = unlist(prDat[theGene,]))
+str(pDAT)
+```
+3. Aggregate data - wildtype and knock-out means.
+------------------------------------------------
+```{r aggregate}
+aggregate(gExp~gType, pDAT, FUN=mean)
+```
+4. Plotting is fun!
+-----------------------------------
+```{r plot}
+stripplot(gType~gExp, pDAT)
+```
+5. Perform t-test between wildtype and knockout for gene of interest.  Obtain p-value.
+----------------------------------------------------------------------
+```{r ttest}
+t.test(gExp~gType, pDAT)
+ttRes  <- t.test(gExp~gType, pDAT)
+str(ttRes)
+ttRes$statistic
+ttRes$p.value
+```
+*Be amazed at R prowess!  Subsequently cry into coffee at not being able to figure out KS?  To be continued...*
