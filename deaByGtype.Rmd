@@ -36,4 +36,4 @@ str(ttRes)
 ttRes$statistic
 ttRes$p.value
 ```
-*Be amazed at R prowess!  Subsequently cry into coffee at not being able to figure out KS?  To be continued...*
+*Be amazed at R prowess!  
