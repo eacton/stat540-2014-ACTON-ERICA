@@ -1,0 +1,92 @@
+Seminar 7: (Optional Material) From BAM File to Count Data
+=====================================================================================
+>By Erica Acton
+
+```{r include=FALSE}
+library(ShortRead)
+library(Rsamtools)
+library(easyRNASeq)
+library(BSgenome.Dmelanogaster.UCSC.dm3)
+library(biomaRt)
+
+```
+Load file, preview, and create index file.
+
+```{r}
+bamDat <- readAligned("drosophilaMelanogasterSubset.bam", type="BAM")
+str(bamDat)
+indexFile <- indexBam("drosophilaMelanogasterSubset.bam")
+```
+Filter reads for ambiguous bases (N) with an allowable limit of 2.
+Create a second filter to only allow reads aligned to the reference genome.  
+Apply filters.
+```{r}
+nFilt <- nFilter(2)
+chrFilt <- chromosomeFilter(regex="chr")
+filt <- compose(nFilt, chrFilt)
+bamDatFiltered <- bamDat[filt(bamDat)]
+```
+Examine BAM data.
+```{r}
+str(bamDatFiltered)
+levels(chromosome(bamDatFiltered))
+id(bamDatFiltered[1:10])
+sread(bamDatFiltered[1:10])
+quality(bamDatFiltered[1:10])
+position(bamDatFiltered[1:10])
+strand(bamDatFiltered[1:10])
+```
+Retrieve chromosome length information.
+```{r}
+(chrSizes <- seqlengths(Dmelanogaster))
+```
+Get annotation information for Drosophila melanogaster from Ensembl.
+```{r}
+ensembl <- useMart("ensembl", dataset="dmelanogaster_gene_ensembl")
+annotation.fields <- c("ensembl_gene_id", "strand","chromosome_name", "start_position", "end_position")
+```
+Restrict to chromosome 2L.
+
+```{r}
+gene.annotation <- getBM(annotation.fields, mart=ensembl, filters="chromosome_name", values=c("2L"))
+str(gene.annotation)
+levels(as.factor(gene.annotation$chromosome))
+#Re-label
+gene.annotation$chromosome <- paste("chr", gene.annotation$chromosome_name,sep="")
+levels(as.factor(gene.annotation$chromosome))
+```
+Store gene annotation information.
+```{r}
+gene.range <- RangedData(IRanges(start=gene.annotation$start_position, end=gene.annotation$end_position), space=gene.annotation$chromosome, strand=gene.annotation$strand, gene=gene.annotation$ensembl_gene_id, universe="Dm3")
+show(gene.range)
+```
+Calculate coverage.
+```{r}
+(cover <- coverage(bamDatFiltered, width=chrSizes))
+```
+Aggregate the coverage for each gene.
+```{r}
+gene.coverage <- aggregate(cover[match(names(gene.range), names(cover))], ranges(gene.range), sum)
+```
+Find the number of reads per gene. Build a data frame to hold the data.
+```{r}
+(gene.coverage <- ceiling(gene.coverage/unique(width(bamDat))))
+length(gene.coverage[["chr2L"]])
+length(ranges(gene.range)$chr2L)
+
+countTable <- data.frame(chromosome=gene.range$space, gene_start=start(gene.range$ranges), gene_end=end(gene.range$ranges),strand=gene.range$strand, gene=gene.range$gene, count=as.vector(gene.coverage[["chr2L"]]))
+dim(countTable)
+head(countTable)
+```
+Normalize data according to read counts (RPKM - number of Reads Per Kilobase of gene (feature) per Million mapped reads).
+```{r}
+countTable <- data.frame(chromosome=gene.range$space, gene_start=start(gene.range$ranges), gene_end=end(gene.range$ranges),strand=gene.range$strand, gene=gene.range$gene, count=as.vector(gene.coverage[["chr2L"]]), RPKM=(as.vector(gene.coverage[["chr2L"]])/(end(gene.range$ranges)-start(gene.range$ranges)))*(1e+09/length(bamDat)))
+head(countTable)
+```
+
+
+
+
+
+
+
