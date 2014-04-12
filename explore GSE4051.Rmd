@@ -1,0 +1,90 @@
+Seminar 1: Explore a small gene expression dataset
+========================================================
+By Erica Acton
+
+>Load photoRec data.
+```{r}
+prDat <- read.table("GSE4051_MINI.txt", header = TRUE, row.names =1)
+str(prDat)
+```
+Basic exploration of prDat
+-------------------------------------------------------------------------------
+>How many rows?
+```{r}
+nrow(prDat)
+```
+>How many columns?
+```{r}
+ncol(prDat)
+```
+>Inspect the first few observations or the last few or for a random sample.
+```{r}
+head(prDat)
+tail(prDat)
+prDat[9,]
+```
+>What does row correspond to - different genes or different mice?
+```{r}
+rownames(prDat)
+#each row corresponds to different mice
+```
+>What are the variable names?
+```{r}
+names(prDat)
+```
+>What flavor is each variable?
+```{r}
+str(prDat)
+#sample = integer, devStage & gType = factors, genes = numbers)
+```
+>Do a sanity check that each integer between 1 and the number of rows in the dataset occurs exactly once.
+```{r}
+seq(prDat)
+sort(prDat$sample)
+seq_len(nrow(prDat))
+
+all(sort(prDat$sample)==seq_len(nrow(prDat)))
+identical(sort(prDat$sample),seq_len(nrow(prDat)))
+```
+>For each factor variable, what are the levels?
+```{r}
+#for devStage
+levels(prDat$devStage)
+#for gType
+levels(prDat$gType)
+```
+>How many observations do we have for each level of devStage? gType?
+```{r}
+#for devStage
+summary(prDat$devStage)
+#for gType
+summary(prDat$gType)
+```
+>Perform cross-tabulation of devStage and gType.
+```{r}
+table(prDat$devStage, prDat$gType)
+addmargins(with(prDat, table(devStage,gType)))
+```
+>If you had to guess, what do you think the intended experimental design was? What happened in real life?
+
+I would assumed the experimental design was to have 4 mice for each genotype and developmental stage, but that one of the NrlKO mice at embryonic stage died.
+
+>For each quantitative variable, what are the extremes?  How about the average or median?
+```{r}
+#samples
+range(prDat$sample)
+
+#poisonfang
+summary(prDat$poisonFang)
+#eggbomb
+summary(prDat$eggBomb)
+#crabhammer
+summary(prDat$crabHammer)
+```
+>Print the observations with row names "Sample_16" and "Sample_38" to screen, showing only the 3 gene expression variables.
+```{r}
+prDat[c("Sample_16", "Sample_38"), c("crabHammer","eggBomb", "poisonFang")]
+```
+>Which samples have eggBomb less than the 0.10 quartile?
+```{r}
+rownames(prDat[prDat$eggBomb < quantile(prDat$eggBomb, 0.1),])
