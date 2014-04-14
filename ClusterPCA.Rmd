@@ -1,0 +1,254 @@
+Seminar 9: Cluster Analysis and PCA
+========================================================
+by Erica Acton
+```{r include=FALSE}
+library(lattice)
+library(knitr)
+library(RColorBrewer)
+library(cluster)
+library(pvclust)
+library(xtable)
+library(limma)
+library(plyr)
+```
+Load photoRec dataset.
+```{r }
+prDat <- read.table("/home/eacton/R/stat540-2014-ACTON-ERICA/GSE4051_data.tsv", header=TRUE, row.names=1)
+str(prDat, max.level=0)
+prDes <- readRDS("/home/eacton/R/stat540-2014-ACTON-ERICA/GSE4051_design.rds")
+str(prDes)
+```
+Rescale the rows.
+```{r}
+sprDat <- (t(scale(t(prDat))))
+str(sprDat, max.level=0, give.attr=FALSE)
+
+round(data.frame(avgBefore=rowMeans(head(prDat)),
+                 avgAfter=rowMeans(head(sprDat)),
+                 varBefore=apply(head(prDat),1,var),
+                 varAfter=apply(head(sprDat),1,var)),2)
+```
+Hierarchical Clustering
+=======================================================================
+
+Computer pairwise distances.
+```{r}
+pr.dis <- dist(t(sprDat), method="euclidian")
+```
+Create a new factor representing the interation of gType and devStage.
+```{r}
+prDes$grp <- with(prDes, interaction(gType, devStage))
+summary(prDes$grp)
+```
+Compute hierarchical clustering using different linkage types.
+```{r}
+pr.hc.s <- hclust(pr.dis, method='single')
+pr.hc.c <- hclust(pr.dis, method='complete')
+pr.hc.a <- hclust(pr.dis, method='average')
+pr.hc.w <- hclust(pr.dis, method='ward')
+```
+Plot the different hierarchical clustering types.
+```{r}
+op <- par(mar=c(0,4,4,2),mfrow=c(2,2))
+
+plot(pr.hc.s, labels=FALSE, main="Single", xlab="")
+plot(pr.hc.c, labels=FALSE, main="Complete", xlab="")
+plot(pr.hc.a, labels=FALSE, main="Average", xlab="")
+plot(pr.hc.w, labels=FALSE, main="Ward", xlab="")
+
+par(op)
+```
+Identify 10 clusters.
+```{r}
+op <- par(mar=c(1,4,4,1))
+
+plot(pr.hc.w, labels=prDes$grp, cex=0.6, main="Ward showing 10 Clusters")
+rect.hclust(pr.hc.w, k=10)
+
+par(op)
+```
+Heatmap example.
+```{r}
+GreyFun <- colorRampPalette(brewer.pal(n=9, "Greys"))
+gTypeCols <- brewer.pal(n=11, "RdGy")[c(4,7)]
+heatmap(as.matrix(sprDat), Rowv=NA, col=GreyFun (256), hclustfun= function (x) hclust(x, method='ward'),
+        scale="none", labCol=prDes$grp, labRow=NA, margins=c(8,1), ColSideColor=gTypeCols[unclass(prDes$gType)])
+legend("topright", legend=levels(prDes$gType), col=gTypeCols, lty=1, lwd=5, cex=0.5)
+```
+Exercise: Playing with heatmaps.
+----------------------------------------------------------------------------
+```{r}
+GnBuFun <- colorRampPalette(brewer.pal(n=9, "GnBu"))
+gTypeCols <- brewer.pal(n=9, "RdGy")[c(4,7)]
+heatmap(as.matrix(sprDat), Rowv=NA, col=GnBuFun (256), hclustfun= function (x) hclust(x, method='average'),
+        scale="none", labCol=prDes$grp, labRow=NA, margins=c(8,1), ColSideColor=gTypeCols[unclass(prDes$gType)])
+legend("topright", legend=levels(prDes$gType), col=gTypeCols, lty=1, lwd=5, cex=0.5)
+```
+K-means Clustering
+---------------------------------------------------------------------------
+Choose parameters, including k.
+```{r}
+set.seed(31)
+k <- 5
+pr.km <- kmeans(t(sprDat), centers=k, nstart=50)
+```
+Look at the sum of squares of each cluster.
+```{r}
+pr.km$withinss
+```
+Look at the composition of each cluster.
+```{r}
+pr.kmTable <- data.frame(devStage=prDes$devStage, cluster=pr.km$cluster)
+prTable <- xtable(with(pr.kmTable, table(devStage, cluster)), 
+                  caption='Number of samples from each developmental stage within each k-means cluster')
+
+align(prTable) <- "lccccc"
+print(prTable, type='html', caption.placement='top')
+```
+PAM Algorithm
+------------------------------------------------------------------------------
+```{r}
+pr.pam <- pam(pr.dis, k=k)
+pr.pamTable <- data.frame(devStage=prDes$devStage, cluster=pr.pam$clustering)
+pamTable <- xtable(with(pr.pamTable, table(devStage, cluster)), caption='Number of samples from each developmental stage within each PAM cluster')
+
+align(pamTable) <- "lccccc"
+print(pamTable, type='html', caption.placement='top')
+
+summary(pr.pam)
+```
+Silhouette plot.
+```{r}
+op <- par(mar=c(5,1,4,4))
+plot(pr.pam, main="Silhouette Plot for 5 Clusters")
+par(op)
+```
+Gene Clustering
+----------------------------------------------------------------------------
+Start with the top 972 genes that showed differential expression across the different developmental stage (BH adjusted p value < 10-5).
+```{r}
+devDes <- model.matrix(~devStage, prDes)
+fit <- lmFit(prDat, devDes)
+ebFit <- eBayes(fit)
+
+topDat <- topTable(ebFit, coef = grep("devStage", colnames(coef(ebFit))), p.value=1e-05, n=972)
+
+ttopDat <- sprDat[rownames(topDat), ]
+head(ttopDat)
+```
+Hierarchical:
+```{r}
+geneC.dis <- dist(ttopDat, method='euclidean')
+geneC.hc.a <- hclust(geneC.dis, method='average')
+
+plot(geneC.hc.a, labels=FALSE, main="Hierarchical with Average Linkage", xlab="")
+```
+Partitioning:
+```{r}
+set.seed(1234)
+k <- 5
+kmeans.genes <- kmeans(ttopDat, centers=k)
+```
+Choose desired cluster.
+```{r}
+clusterNum <- 1
+```
+Set up axes.
+Plot the expression of all the genes in the selected cluster in grey.
+Add in the cluster center.
+Colour points to show the developmental stage.
+```{r}
+plot(kmeans.genes$centers[clusterNum,], ylim=c(-4,4), type='n',xlab="Samples", ylab="Relative Expression")
+
+matlines(y=t(ttopDat[kmeans.genes$cluster==clusterNum, ]), col='grey')
+points(kmeans.genes$centers[clusterNum,],type='l')
+points(kmeans.genes$centers[clusterNum,], col=prDes$devStage,pch=20)
+```
+Heatmaps (hierarchical):
+```{r}
+devStageCols <- brewer.pal(n=11, "RdGy")[c(2,4,7,9,11)]
+heatmap(as.matrix(ttopDat), col=GreyFun (256), hclustfun= function (x) hclust(x, method='average'), scale="none", labCol=prDes$grp, labRow=NA, margins=c(8,1), ColSideColor=devStageCols[unclass(prDes$devStage)])
+legend("topleft", levels(prDes$devStage), col=devStageCols, lty=1, lwd=5, cex=0.5)
+```
+Redefining the Attributes
+-------------------------------------------------------------------------------
+Define new attributes for a gene and estimate the parameters.
+```{r}
+annoTopDat <- stack(as.data.frame(ttopDat))
+annoTopDat$probeset <- rownames(ttopDat)
+
+annoTopDat <- merge(annoTopDat,prDes,by.x="ind", by.y="sidChar")
+devStageAvg <- ddply(annoTopDat, ~probeset, function(x) {
+  avgbyDevStage <- aggregate(values ~ devStage,x,mean)$values 
+  names(avgbyDevStage) <- levels(x$devStage) 
+  avgbyDevStage
+  })
+
+rownames(devStageAvg) <- devStageAvg$probeset
+devStageAvg$probeset <- NULL
+str(devStageAvg)
+```
+Make a heatmap.
+```{r}
+heatmap(as.matrix(devStageAvg), Colv=NA, col=GreyFun(256), hclustfun=function(x) hclust(x, method="average"),labCol=colnames(devStageAvg), labRow=NA, margin=c(8,1))
+```
+Look at the relative expression in all clusters with respect to developmental stage as determined by kmeans.
+```{r}
+k <- 4
+geneDS.km <- kmeans(devStageAvg, centers=k, nstart=50)
+clust.centers <- geneDS.km$centers
+```
+Plot all cluster centers separately.
+```{r}
+op <- par(mfrow=c(2,2))
+for(clusterNum in 1:4) {
+  plot(clust.centers[clusterNum,], ylim=c(-4,4), type='n', 
+       xlab="Developmental Stage", ylab="Relative Expression", axes=F, 
+       main=paste("Cluster", clusterNum, sep=""))
+  axis(2)
+  axis(1,1:5, c(colnames(clust.centers)[1:4], "4W"), cex.axis=0.9)
+
+  matlines(y=t(devStageAvg[geneDS.km$cluster==clusterNum,]), col='grey')
+  points(clust.centers[clusterNum,],type='l')
+  points(clust.centers[clusterNum,], pch=20)
+  }
+par(op)
+```
+Plot to compare all clusters' centers.
+```{r}
+plot(clust.centers[clusterNum,], ylim=c(-4,4), type='n', 
+       xlab="Developmental Stage", ylab="Relative Expression", axes=F, 
+       main="Clusters' Centers")
+  axis(2)
+  axis(1,1:5, c(colnames(clust.centers)[1:4], "4W"), cex.axis=0.9)
+
+for(clusterNum in 1:4) {
+  points(clust.centers[clusterNum,],type='l', col=clusterNum, lwd=2)
+  points(clust.centers[clusterNum,], col=clusterNum, pch=20)
+}
+```
+Plotting 3-dimensional clusters as determined by k-means.
+```{r}
+cloud(devStageAvg[,"E16"]~devStageAvg[,"P6"]*devStageAvg[,"4_weeks"], col=geneDS.km$clust, xlab="E16", ylab="P6", zlab="4_weeks")
+```
+Statistical Measures to Evaluate Clusters
+--------------------------------------------------------------------------
+Qualifying cluster membership.
+```{r}
+pvc <- pvclust(ttopDat, nboot=100)
+plot(pvc, labels=prDes$grp, cex=0.6)
+pvrect(pvc, alpha=0.95)
+```
+PCA (Principal Components Analysis)
+---------------------------------------------------------------------------
+```{r}
+#scree plot
+pcs <- prcomp(sprDat, center=F, scale=F)
+plot(pcs)
+#scatterplot relating PCs to covariates
+prinComp <- cbind(prDes, pcs$rotation[prDes$sidNum,1:10])
+plot(prinComp[,c("sidNum", "devStage","gType","PC1","PC2","PC3")], pch=19, cex=0.8)
+#plot data on 2 PCs, coloured by devStage
+plot(prinComp[,c("PC1","PC2")], bg=prDes$devStage, pch=21, cex=1.5)
+legend(list(x=0.2, y=0.3), as.character(levels(prDes$devStage)), pch=21, pt.bg=c(1,2,3,4,5))
+```
