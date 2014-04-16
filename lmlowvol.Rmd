@@ -1,0 +1,42 @@
+Seminar 5: Fitting and Interpreting Linear Models (Low Volume)
+===============================================================================
+By Erica Acton
+
+Load photoRec data.
+```{r}
+library(lattice)
+prDat <- read.table("/home/eacton/R/stat540-2014-ACTON-ERICA/GSE4051_data.tsv")
+prDes <- readRDS("/home/eacton/R/stat540-2014-ACTON-ERICA/GSE4051_design.rds")
+str(prDat, max.level=0)
+str(prDes)
+```
+Write a function to prepare a mini-dataset for a small number of genes.
+```{r}
+(luckyGenes <- c("1419655_at","1438815_at"))
+
+jDat <- subset(prDat, rownames(prDat) %in% luckyGenes)
+jDat <- data.frame(gExp=as.vector(t(as.matrix(jDat))),gene=factor(rep(rownames(jDat), each=ncol (jDat)),levels=luckyGenes))
+jDat <- suppressWarnings(data.frame(prDes, jDat))
+str(jDat)
+head(jDat)
+tail(jDat)
+```
+Make a stripplot to check plot against Jenny's plot.
+```{r}
+stripplot(gExp~devStage|gene, jDat,group=gType,jitter.data=TRUE,auto.key=TRUE,type=c('p','a'), grid=TRUE)
+```
+Write a function to make a stripplot to a mini-dataset.
+```{r}
+makeStripplot <- function (x) return(stripplot(gExp~devStage|gene, x,group=gType,jitter.data=TRUE,auto.key=TRUE,type=c('p','a'), grid=TRUE, pch=17, cex=3))
+makeStripplot(jDat)
+```
+Create a mini-data set and plot.
+```{r}
+makeStripplot(newDat <- {luckyGenes <- c("1456341_a_at")
+jDat <- subset(prDat, rownames(prDat) %in% luckyGenes)
+jDat <- data.frame(gExp=as.vector(t(as.matrix(jDat))),gene=factor(rep(rownames(jDat), each=ncol (jDat)),levels=luckyGenes))
+jDat <- suppressWarnings(data.frame(prDes, jDat))})
+str(newDat)
+head(newDat)
+```
+
