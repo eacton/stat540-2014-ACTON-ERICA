@@ -1,0 +1,107 @@
+R Markdown: So Fun
+==============================
+#So fun
+##So, so fun
+###So, so, so fun
+
+Today is a beautiful day to learn R Markdown.  You can do things you can do in a word document like *italics* or _italics_ and __bold__ or **bold**.
+
+> You can also make pretty blockquote segments of text. You can have equations in the text.  ~~I would like to own `r 2+2` llamas~~.  
+>
+>> Yep.  
+>
+> Okay then.
+
+That is a lie, I would really like to own...
+----------------------------------------------
+```{r}
+library(knitr)
+library(rmarkdown)
+library(markdown)
+2^10 
+x <- 2^10
+```
+llamas.
+
+##Capybaras are also awesome!
+
+Other animals I like.
+
+1. pikas  
+2. rodents in general    
+    +guinea pigs  
+    +hamsters
+    
+
+Code is evaluated.
+```{r code and plot}
+happiness <- 1:5
+llamas <- c(1,100,50,10,20)
+plot(happiness, llamas, type="l")
+```
+
+Oops! forgot title!
+Don't have to copy and paste images! Just change and knit.
+```{r code and plot revised}
+happiness <- 1:5
+llamas <- c(1,100,50,10,20)
+plot(happiness, llamas, type="l", main="Perfect number of llamas for absolute happiness?")
+```
+
+But if you just want to show the output of the code:
+```{r plot only, echo=FALSE}
+happiness <- 1:5
+llamas <- c(1,100,50,10,20)
+plot(happiness, llamas, type="l", main="Perfect number of llamas for absolute happiness?")
+```
+
+Or just show the code:
+```{r code only, eval=FALSE}
+
+happiness <- 1:5
+llamas <- c(1,100,50,10,20)
+plot(happiness, llamas, type="l", main="Perfect number of llamas for absolute happiness?")
+```
+
+
+>You can also put these up on github! Automatically rendered, and can also see the raw code.
+
+Publishing... ie. RPubs
+
+Can make pdfs!
+
+Can include urls:
+
+https://github.com/minisciencegirl/studyGroup
+
+Or a descriptive link:
+
+[R Study Group](https://github.com/minisciencegirl/studyGroup)
+
+You can include pictures!
+
+
+![well-dressed llama](http://fc04.deviantart.net/fs70/i/2010/350/a/0/high_society___llama_snob_by_meandmyself2000-d350orb.jpg)  
+
+\pagebreak
+
+![llamas](llamas.jpg)
+
+You can make tables...
+
+Llamas|Alpacas
+-----|------
+better underbites|better haircuts
+
+
+Future chunks dependent on previous chunks.
+dep_prev()
+```{r}
+x
+```
+
+To generate a document without previewing it first:
+render("Rmd demo.Rmd", "pdf_document")
+
+There are also templates!
+
